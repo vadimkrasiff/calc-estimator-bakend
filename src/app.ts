@@ -10,6 +10,8 @@ import { authenticateToken } from './middleware/authMiddleware';
 import profileRouter from './routes/profile';
 import calculationsRouter from './routes/calculations';
 import publicCalculationsRouter from './routes/publicCalculations';
+import simpleCalculationsRouter from './routes/simpleCalculations';
+import publicSimpleCalculationsRouter from './routes/publicSimpleCalculations';
 
 dotenv.config();
 
@@ -28,6 +30,8 @@ app.use('/api/users', usersRouter);
 app.use('/api/invitations', invitationsRouter);
 app.use('/api/profile', authenticateToken, profileRouter);
 app.use('/api/calculations', authenticateToken, calculationsRouter); // Новый роут
+app.use('/api/simple-calculations', authenticateToken, simpleCalculationsRouter);
+app.use('/api/public', publicSimpleCalculationsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

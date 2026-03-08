@@ -174,6 +174,107 @@ export const getAllPrices = async (
   }
 };
 
+export const getAllPricesForExport = async (
+  materialId?: string,
+  date?: string,
+  latestOnly: boolean = false
+) => {
+  try {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (latestOnly) {
+      let sql = `
+        WITH ranked_prices AS (
+          SELECT 
+            mp.id, 
+            mp.material_id, 
+            m.name as material_name, 
+            mp.price, 
+            mp.supplier, 
+            mp.date,
+            ROW_NUMBER() OVER (PARTITION BY mp.material_id ORDER BY mp.date DESC) as rn
+          FROM material_prices mp
+          LEFT JOIN materials m ON mp.material_id = m.id
+          WHERE 1=1
+      `;
+
+      if (materialId) {
+        conditions.push(`mp.material_id = $${paramIndex}`);
+        params.push(materialId); // ← без parseInt!
+        paramIndex++;
+      }
+
+      if (date) {
+        conditions.push(`DATE(mp.date) = $${paramIndex}`);
+        params.push(date);
+        paramIndex++;
+      }
+
+      if (conditions.length > 0) {
+        sql += ` AND ${conditions.join(' AND ')}`;
+      }
+
+      sql += `
+        )
+        SELECT id, material_id, material_name, price, supplier, date
+        FROM ranked_prices
+        WHERE rn = 1
+        ORDER BY material_name, date DESC
+      `;
+
+      const result = await pool.query(sql, params);
+      return result.rows.map(row => ({
+        id: row.id,
+        materialId: row.material_id?.toString(),
+        materialName: row.material_name,
+        price: parseFloat(row.price),
+        supplier: row.supplier,
+        date: row.date,
+      }));
+    } else {
+      let sql = `
+        SELECT mp.id, mp.material_id, m.name as material_name, mp.price, mp.supplier, mp.date
+        FROM material_prices mp
+        LEFT JOIN materials m ON mp.material_id = m.id
+        WHERE 1=1
+      `;
+
+      if (materialId) {
+        conditions.push(`mp.material_id = $${paramIndex}`);
+        params.push(materialId); // ← без parseInt!
+        paramIndex++;
+      }
+
+      if (date) {
+        conditions.push(`DATE(mp.date) = $${paramIndex}`);
+        params.push(date);
+        paramIndex++;
+      }
+
+      if (conditions.length > 0) {
+        sql += ` AND ${conditions.join(' AND ')}`;
+      }
+
+      sql += ` ORDER BY mp.date DESC, material_name`;
+      const result = await pool.query(sql, params);
+
+      return result.rows.map(row => ({
+        id: row.id,
+        materialId: row.material_id?.toString(),
+        materialName: row.material_name,
+        price: parseFloat(row.price),
+        supplier: row.supplier,
+        date: row.date,
+      }));
+    }
+  } catch (err) {
+    console.error('getAllPricesForExport error:', err);
+    throw err; // Пробрасываем ошибку дальше для обработки в контроллере
+  }
+};
+
 export const getPricesByMaterialId = async (materialId: string): Promise<MaterialPrice[]> => {
   const result = await pool.query(`
     SELECT mp.id, mp.material_id, m.name as material_name, mp.price, mp.supplier, mp.date 

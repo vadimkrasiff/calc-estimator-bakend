@@ -30,6 +30,33 @@ export const getPrices = async (req: Request, res: Response) => {
   }
 };
 
+
+export const exportPrices = async (req: Request, res: Response) => {
+  try {
+    const materialId = req.query.materialId as string;
+    const date = req.query.date as string;
+    const latestOnly = req.query.latestOnly === 'true';
+
+    const data = await priceModel.getAllPricesForExport(materialId, date, latestOnly);
+
+    res.json({
+      data,
+      total: data.length,
+      exportedAt: new Date().toISOString(),
+      filters: { materialId, date, latestOnly },
+    });
+  } catch (err: any) {
+    console.error('Export error:', err);
+    
+    // Возвращаем более информативную ошибку для отладки (в продакшене лучше логировать)
+    res.status(500).json({ 
+      error: 'Failed to export prices',
+      message: err.message, // ← только для dev-режима!
+      code: err.code // код ошибки PostgreSQL, например '42703'
+    });
+  }
+};
+
 export const getPricesByMaterial = async (req: Request, res: Response) => {
   try {
     const { materialId } = req.params;

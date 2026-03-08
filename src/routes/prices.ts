@@ -5,6 +5,7 @@ import { authenticateToken } from '../middleware/authMiddleware';
 const router = Router();
 
 // Все маршруты требуют авторизации
+router.get('/export', priceController.exportPrices);
 router.get('/', authenticateToken, priceController.getPrices);
 router.get('/material/:materialId', authenticateToken, priceController.getPricesByMaterial);
 router.get('/:id', authenticateToken, priceController.getPrice);
